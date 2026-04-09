@@ -759,7 +759,7 @@ def lostark_single_character_etl():
                     cur.executemany("""
                         INSERT INTO lostark.armory_equipment_tb 
                         (character_name, slot_index, type, name, collected_at, icon, grade, 
-                        enhancement_level, quality, item_tier, advanced_reinforcement, 
+                        honing_level, quality, item_tier, advanced_honing_level,
                         basic_effect, additional_effect, ark_passive_effect) 
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                     """, all_eq_tuples)
