@@ -1,0 +1,10 @@
+requests
+beautifulsoup4
+pandas
+sqlalchemy
+psycopg2-binary
+selenium
+python-dotenv
+openai
+pgvector
+apache-airflow>=2.8.0

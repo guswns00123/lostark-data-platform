@@ -1,0 +1,38 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: GCP VM에 SSH로 배포
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_VM_HOST }}
+          username: ${{ secrets.GCP_VM_USER }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            echo "=== [1/4] 코드 업데이트 ==="
+            cd /home/airflow/lostark-data-platform
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== [2/4] 의존성 업데이트 ==="
+            source /home/airflow/venv/bin/activate
+            pip install -r requirements.txt --quiet
+
+            echo "=== [3/4] DAG 폴더 동기화 ==="
+            rsync -av --delete \
+              /home/airflow/lostark-data-platform/dags/ \
+              /opt/airflow/dags-prod/
+
+            echo "=== [4/4] DAG 목록 확인 ==="
+            airflow dags list | head -20
+
+            echo "=== 배포 완료 ==="
