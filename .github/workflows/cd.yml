@@ -18,19 +18,10 @@ jobs:
           script: |
             set -e
 
-            echo "=== [1/3] 코드 업데이트 ==="
+            echo "=== [1/2] 코드 업데이트 ==="
             cd /home/jsdr7204/airflow/lostark-data-platform
             git fetch origin main
             git reset --hard origin/main
 
-            echo "=== [2/3] DAG 및 plugins 동기화 ==="
-            rsync -av --delete \
-              /home/jsdr7204/airflow/lostark-data-platform/dags/ \
-              /home/jsdr7204/airflow/dags/
-
-            rsync -av --delete \
-              /home/jsdr7204/airflow/lostark-data-platform/plugins/ \
-              /home/jsdr7204/airflow/plugins/
-
-            echo "=== [3/3] 배포 완료 ==="
-            echo "Airflow가 DAG 변경사항을 자동 감지합니다."
+            echo "=== [2/2] 배포 완료 ==="
+            echo "Docker 볼륨이 레포를 직접 마운트하므로 즉시 반영됩니다."
