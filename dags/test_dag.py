@@ -9,7 +9,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.task_group import TaskGroup
 
 # 💡 수정됨: 'plugins.' 생략 및 parsers 임포트 하나로 병합
-from extractors import fetch_armory_data
+from extractors import fetch_armory_data, fetch_sibling_characters
 from parsers import (
     parse_tooltip_content, split_core_options, split_gem_effect, strip_html, 
     parse_ark_passive_description, parse_rank_level, parse_avatar_tooltip, 
@@ -73,6 +73,57 @@ def lostark_single_character_etl():
 
     
     with TaskGroup(group_id='load_tasks', tooltip='데이터베이스 적재 태스크 그룹') as load_group:
+
+        @task()
+        def load_character_siblings(dag_run=None, **context):
+            """원정대(siblings) API 호출 → character_info_tb UPSERT"""
+            collected_at = context["logical_date"].strftime("%Y-%m-%d %H:%M:%S")
+
+            conf = dag_run.conf if dag_run else {}
+            char_name = conf.get('character_name')
+            if not char_name:
+                raise ValueError("❌ 전달받은 캐릭터 이름(character_name)이 없습니다.")
+
+            api_key = Variable.get("LOSTARK_API_KEY")
+
+            logger.info(f"[{char_name}] 원정대 정보 조회 중...")
+            siblings_data = fetch_sibling_characters(char_name, api_key)
+
+            if not siblings_data:
+                logger.info("적재할 원정대 데이터가 없습니다.")
+                return
+
+            # 데이터 전처리: "1,683.00" -> 1683.00
+            processed_tuples = []
+            for char in siblings_data:
+                raw_item_level = char.get("ItemAvgLevel") or "0"
+                clean_item_level = float(raw_item_level.replace(",", ""))
+
+                processed_tuples.append((
+                    char.get("CharacterName"),
+                    char.get("ServerName"),
+                    char.get("CharacterLevel"),
+                    char.get("CharacterClassName"),
+                    clean_item_level,
+                ))
+
+            # DB 적재 (UPSERT)
+            hook = PostgresHook(postgres_conn_id=CONN_ID)
+            with hook.get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.executemany("""
+                        INSERT INTO lostark.character_info_tb
+                        (character_name, server_name, character_level, character_class_name, item_avg_level)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (character_name) DO UPDATE SET
+                            server_name = EXCLUDED.server_name,
+                            character_level = EXCLUDED.character_level,
+                            character_class_name = EXCLUDED.character_class_name,
+                            item_avg_level = EXCLUDED.item_avg_level;
+                    """, processed_tuples)
+                conn.commit()
+
+            logger.info(f"✅ 원정대 캐릭터 {len(processed_tuples)}건 전처리 및 UPSERT 완료")
 
         @task()
         def load_ark_grid_cores(file_path: str, **context):
@@ -1044,6 +1095,7 @@ def lostark_single_character_etl():
             logger.info(f"✅ 스킬 상세 데이터 총 {len(all_skill_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
 
+        load_character_siblings()
         load_ark_grid_cores(data_file_path)
         load_ark_grid_gems(data_file_path)
         load_armory_profile(data_file_path)
