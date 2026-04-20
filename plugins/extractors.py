@@ -30,6 +30,30 @@ def fetch_armory_data(character_name: str, api_key: str):
         logger.error(f"❌ API 통신 중 에러 발생: {e}")
         return None
 
+def fetch_sibling_characters(character_name: str, api_key: str):
+    """
+    특정 캐릭터의 원정대(siblings) 캐릭터 목록을 조회합니다.
+    """
+    encoded_name = urllib.parse.quote(character_name)
+    url = f"{BASE_URL}/characters/{encoded_name}/siblings"
+
+    headers = {
+        "accept": "application/json",
+        "authorization": f"bearer {api_key}"
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.error(f"❌ siblings API 호출 실패 ({response.status_code}): {response.text}")
+            return []
+    except Exception as e:
+        logger.error(f"❌ siblings API 통신 중 에러 발생: {e}")
+        return []
+
+
 def fetch_market_data(search_payload: dict, api_key: str):
     """
     거래소 API를 호출하여 검색 조건에 맞는 모든 아이템 리스트를 반환합니다.
