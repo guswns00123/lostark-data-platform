@@ -10,6 +10,7 @@ from airflow.utils.task_group import TaskGroup
 
 # 💡 수정됨: 'plugins.' 생략
 from extractors import fetch_market_data
+from alerts import discord_failure_callback
 
 CONN_ID = "postgres_lostark"
 
@@ -19,6 +20,10 @@ CONN_ID = "postgres_lostark"
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["lostark", "market", "utils"],
+    default_args={
+        "on_failure_callback": discord_failure_callback,
+        "retries": 0,
+    },
 )
 def lostark_market_collect_1day():
 

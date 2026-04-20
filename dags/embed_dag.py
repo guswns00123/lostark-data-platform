@@ -19,6 +19,7 @@ from airflow.operators.python import PythonOperator
 
 from game_chatbot_data.embeddings.few_shot import run as run_few_shot
 from game_chatbot_data.embeddings.schema_embed import run as run_schema_embed
+from alerts import discord_failure_callback
 
 with DAG(
     dag_id="embed_vectors",
@@ -28,6 +29,10 @@ with DAG(
     catchup=False,
     is_paused_upon_creation=True,
     tags=["lostark", "embedding", "pgvector"],
+    default_args={
+        "on_failure_callback": discord_failure_callback,
+        "retries": 0,
+    },
 ) as dag:
     t1 = PythonOperator(
         task_id="embed_few_shot",

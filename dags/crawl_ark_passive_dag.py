@@ -18,6 +18,7 @@ from airflow.operators.python import PythonOperator
 
 from game_chatbot_data.config import JOB_CODES
 from game_chatbot_data.crawlers.ark_passive import run as run_ark_passive
+from alerts import discord_failure_callback
 
 ENV = Variable.get("environment", default_var="prod")
 TARGET_JOB_CODES = [102] if ENV == "dev" else JOB_CODES
@@ -35,6 +36,10 @@ with DAG(
     catchup=False,
     is_paused_upon_creation=True,
     tags=["lostark", "crawl", "meta"],
+    default_args={
+        "on_failure_callback": discord_failure_callback,
+        "retries": 0,
+    },
 ) as dag:
     PythonOperator(
         task_id="crawl_and_load_ark_passive",
