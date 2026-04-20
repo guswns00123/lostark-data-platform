@@ -14,6 +14,7 @@ from airflow.sensors.time_delta import TimeDeltaSensor
 
 # 💡 수정됨: plugins 폴더가 루트 경로로 인식되므로 'plugins.' 생략
 from extractors import fetch_auction_data
+from alerts import discord_failure_callback
 
 CONN_ID = "postgres_lostark"
 
@@ -41,6 +42,10 @@ def parse_auction_options(options_list):
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["lostark", "auction", "taskgroup"],
+    default_args={
+        "on_failure_callback": discord_failure_callback,
+        "retries": 0,
+    },
 )
 def auction_collect_dag():
 

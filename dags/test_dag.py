@@ -11,12 +11,13 @@ from airflow.utils.task_group import TaskGroup
 # 💡 수정됨: 'plugins.' 생략 및 parsers 임포트 하나로 병합
 from extractors import fetch_armory_data, fetch_sibling_characters
 from parsers import (
-    parse_tooltip_content, split_core_options, split_gem_effect, strip_html, 
-    parse_ark_passive_description, parse_rank_level, parse_avatar_tooltip, 
-    extract_card_description, parse_equipment_tooltip, parse_gem_effects, 
-    clean_number, parse_skill_tooltip, parse_additional_effect_to_json, 
+    parse_tooltip_content, split_core_options, split_gem_effect, strip_html,
+    parse_ark_passive_description, parse_rank_level, parse_avatar_tooltip,
+    extract_card_description, parse_equipment_tooltip, parse_gem_effects,
+    clean_number, parse_skill_tooltip, parse_additional_effect_to_json,
     parse_basic_effect_to_json
 )
+from alerts import discord_failure_callback
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,10 @@ CONN_ID = "postgres_lostark"
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["lostark", "api", "on-demand"],
+    default_args={
+        "on_failure_callback": discord_failure_callback,
+        "retries": 0,
+    },
 )
 def lostark_single_character_etl():
 

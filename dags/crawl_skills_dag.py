@@ -23,6 +23,7 @@ from airflow.operators.python import PythonOperator
 
 from game_chatbot_data.config import JOB_CODES
 from game_chatbot_data.crawlers.skills import run as run_skills
+from alerts import discord_failure_callback
 
 # Airflow UI > Admin > Variables > environment 값으로 실행 범위 제어
 # dev: 102(워로드) 1개만 테스트 / prod: 전체 직업 코드
@@ -42,6 +43,10 @@ with DAG(
     catchup=False,
     is_paused_upon_creation=True,
     tags=["lostark", "crawl", "meta"],
+    default_args={
+        "on_failure_callback": discord_failure_callback,
+        "retries": 0,
+    },
 ) as dag:
     PythonOperator(
         task_id="crawl_and_load_skills",

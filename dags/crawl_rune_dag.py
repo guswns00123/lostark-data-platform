@@ -14,6 +14,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 from game_chatbot_data.crawlers.rune import run as run_rune
+from alerts import discord_failure_callback
 
 with DAG(
     dag_id="crawl_rune",
@@ -23,6 +24,10 @@ with DAG(
     catchup=False,
     is_paused_upon_creation=True,
     tags=["lostark", "crawl", "meta"],
+    default_args={
+        "on_failure_callback": discord_failure_callback,
+        "retries": 0,
+    },
 ) as dag:
     PythonOperator(
         task_id="crawl_and_load_rune",
