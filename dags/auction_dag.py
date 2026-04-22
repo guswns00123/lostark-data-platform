@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.utils.task_group import TaskGroup
 
+
+
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from psycopg2.extras import execute_batch
 from airflow.models import Variable
@@ -71,7 +73,7 @@ def auction_collect_dag():
     @task()
     def load_auction_task(file_path: str, item_type: str, **context):
         if not file_path or not os.path.exists(file_path):
-            print(f"❌ [{item_type}] 처리할 데이터가 없습니다.")
+            print(f"❌ [{item_type}] 처리할 데이터가 없습니다!")
             return
 
         collected_at = context['logical_date'] 
