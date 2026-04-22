@@ -40,7 +40,7 @@ def parse_auction_options(options_list):
 
 @dag(
     dag_id="lostark_auction_collect",
-    schedule=None,
+    schedule="*/10 * * * *",
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["lostark", "auction", "taskgroup"],
