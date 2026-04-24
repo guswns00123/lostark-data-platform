@@ -40,7 +40,7 @@ def parse_auction_options(options_list):
 
 @dag(
     dag_id="lostark_auction_collect",
-    schedule="*/10 * * * *",
+    schedule="*/20 * * * *",
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["lostark", "auction", "taskgroup"],
@@ -55,7 +55,7 @@ def auction_collect_dag():
 
     @task()
     def extract_auction_task(payload: dict, item_label: str, **context):
-        api_key = Variable.get("LOSTARK_API_KEY") 
+        api_key = Variable.get("LOSTARK_API_KEY_2") 
         items = fetch_auction_data(payload, api_key)
         
         if not items:
@@ -371,6 +371,122 @@ def auction_collect_dag():
                     {"FirstOption": 2, "SecondOption": 16, "MinValue": 80, "MaxValue": 99},
                     {"FirstOption": 2, "SecondOption": 18, "MinValue": 120, "MaxValue": 120},
                     {"FirstOption": 4, "SecondOption": 2, "MinValue": 3, "MaxValue": 3}
+                ]
+            }
+        },
+
+        # --- 서폿용 장신구 ---
+        {
+            "label": "반지_상하_1_서폿",
+            "type": "반지",
+            "payload": {
+                "Sort": "BUY_PRICE",
+                "SortCondition": "ASC",
+                "CategoryCode": 200030,
+                "ItemTier": 4,
+                "ItemGrade": "고대",
+                "ItemName": "반지",
+                "PageNo": 1,
+                "ItemGradeQuality": None,
+                "EtcOptions": [
+                    {"FirstOption": 7, "SecondOption": 51, "MinValue": 500, "MaxValue": 500},
+                    {"FirstOption": 7, "SecondOption": 52, "MinValue": 200, "MaxValue": 750},
+                    {"FirstOption": 1, "SecondOption": 11, "MinValue": 11000, "MaxValue": 18000}
+                ]
+            }
+        },
+        {
+            "label": "반지_상하_2_서폿",
+            "type": "반지",
+            "payload": {
+                "Sort": "BUY_PRICE",
+                "SortCondition": "ASC",
+                "CategoryCode": 200030,
+                "ItemTier": 4,
+                "ItemGrade": "고대",
+                "ItemName": "반지",
+                "PageNo": 1,
+                "ItemGradeQuality": None,
+                "EtcOptions": [
+                    {"FirstOption": 7, "SecondOption": 51, "MinValue": 135, "MaxValue": 500},
+                    {"FirstOption": 7, "SecondOption": 52, "MinValue": 750, "MaxValue": 750},
+                    {"FirstOption": 1, "SecondOption": 11, "MinValue": 11000, "MaxValue": 18000}
+                ]
+            }
+        },
+        {
+            "label": "귀걸이_상하_1_서폿",
+            "type": "귀걸이",
+            "payload": {
+                "Sort": "BUY_PRICE",
+                "SortCondition": "ASC",
+                "CategoryCode": 200020,
+                "ItemTier": 4,
+                "ItemGrade": "고대",
+                "ItemName": "귀걸이",
+                "PageNo": 1,
+                "ItemGradeQuality": None,
+                "EtcOptions": [
+                    {"FirstOption": 7, "SecondOption": 54, "MinValue": 960, "MaxValue": 960},
+                    {"FirstOption": 7, "SecondOption": 46, "MinValue": 80, "MaxValue": 300},
+                    {"FirstOption": 1, "SecondOption": 11, "MinValue": 11000, "MaxValue": 18000}
+                ]
+            }
+        },
+        {
+            "label": "귀걸이_상하_2_서폿",
+            "type": "귀걸이",
+            "payload": {
+                "Sort": "BUY_PRICE",
+                "SortCondition": "ASC",
+                "CategoryCode": 200020,
+                "ItemTier": 4,
+                "ItemGrade": "고대",
+                "ItemName": "귀걸이",
+                "PageNo": 1,
+                "ItemGradeQuality": None,
+                "EtcOptions": [
+                    {"FirstOption": 7, "SecondOption": 54, "MinValue": 195, "MaxValue": 960},
+                    {"FirstOption": 7, "SecondOption": 46, "MinValue": 300, "MaxValue": 300},
+                    {"FirstOption": 1, "SecondOption": 11, "MinValue": 11000, "MaxValue": 18000}
+                ]
+            }
+        },
+        {
+            "label": "목걸이_상하_1_서폿",
+            "type": "목걸이",
+            "payload": {
+                "Sort": "BUY_PRICE",
+                "SortCondition": "ASC",
+                "CategoryCode": 200010,
+                "ItemTier": 4,
+                "ItemGrade": "고대",
+                "ItemName": "목걸이",
+                "PageNo": 1,
+                "ItemGradeQuality": None,
+                "EtcOptions": [
+                    {"FirstOption": 7, "SecondOption": 43, "MinValue": 215, "MaxValue": 600},
+                    {"FirstOption": 7, "SecondOption": 44, "MinValue": 800, "MaxValue": 800},
+                    {"FirstOption": 1, "SecondOption": 11, "MinValue": 15000, "MaxValue": 18000}
+                ]
+            }
+        },
+        {
+            "label": "목걸이_상하_2_서폿",
+            "type": "목걸이",
+            "payload": {
+                "Sort": "BUY_PRICE",
+                "SortCondition": "ASC",
+                "CategoryCode": 200010,
+                "ItemTier": 4,
+                "ItemGrade": "고대",
+                "ItemName": "목걸이",
+                "PageNo": 1,
+                "ItemGradeQuality": None,
+                "EtcOptions": [
+                    {"FirstOption": 7, "SecondOption": 43, "MinValue": 600, "MaxValue": 600},
+                    {"FirstOption": 7, "SecondOption": 44, "MinValue": 215, "MaxValue": 800},
+                    {"FirstOption": 1, "SecondOption": 11, "MinValue": 15000, "MaxValue": 18000}
                 ]
             }
         }

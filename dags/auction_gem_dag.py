@@ -49,7 +49,7 @@ def auction_gem_collect_dag():
 
     @task()
     def extract_auction_task(payload: dict, item_label: str, **context):
-        api_key = Variable.get("LOSTARK_API_KEY")
+        api_key = Variable.get("LOSTARK_API_KEY_2")
         items = fetch_auction_data(payload, api_key)
 
         if not items:

@@ -30,7 +30,7 @@ def lostark_market_collect_1day():
     @task()
     def extract_market_task(payload: dict, item_label: str, **context):
         # 1. 데이터 추출 (utils 함수 사용)
-        api_key = Variable.get("LOSTARK_API_KEY") 
+        api_key = Variable.get("LOSTARK_API_KEY_2") 
         items = fetch_market_data(payload, api_key)
         
         if not items:
