@@ -287,7 +287,10 @@ def parse_additional_effect_to_json(item_type, text):
         # 예: "치명타 피해 +2.40%", "무기 공격력 +195"
         matches = re.findall(r"([가-힣\s]+)\s*\+([0-9.]+%?)", clean_text)
         for name, val in matches:
-            result[name.strip()] = val
+            clean_name = name.strip()
+            # %(퍼센트) 옵션 vs +(정수) 옵션 구분 — 같은 스탯명의 % 옵션과 정수 옵션이 동시에 붙는 경우 키 충돌 방지
+            suffix = "%" if val.endswith("%") else "+"
+            result[f"{clean_name} {suffix}"] = val
 
     # 3. 팔찌: 기본 스탯(치/특/신 등) + 텍스트 효과 혼합 형태
     elif item_type == "팔찌":
@@ -296,10 +299,13 @@ def parse_additional_effect_to_json(item_type, text):
         if stat_matches:
             result["stats"] = {name: int(val) for name, val in stat_matches}
 
-        # 스탯 텍스트를 날려버리고 남은 "특수 부여 효과"만 추출
+        # 스탯 텍스트를 날려버리고 남은 "특수 부여 효과" 추출
         special_text = re.sub(r"(특화|치명|신속|제압|인내|숙련|힘|민첩|지능|체력)\s*\+[0-9]+\s*", "", clean_text).strip()
         if special_text:
-            result["special_effects"] = special_text
+            # parse_equipment_tooltip에서 각 부여 효과 시작 지점을 sentinel("LOSTARK_SPLIT_MARKER")로 표시해 둔 것을 split → 효과별 리스트
+            effects = [e.strip() for e in special_text.split("LOSTARK_SPLIT_MARKER") if e.strip()]
+            if effects:
+                result["special_effects"] = effects
 
     # 4. 내실 아이템 (보주, 부적, 나침반): 텍스트가 복잡하므로 원문 또는 특정 키워드로 저장
     elif item_type in ["보주", "부적", "나침반"]:
@@ -380,9 +386,18 @@ def parse_equipment_tooltip(tooltip_str, item_name):
                 
                 if "기본 효과" in el0:
                     basic_effect = el1
-                elif any(keyword in el0 for keyword in ["추가 효과", "연마 효과", "팔찌 효과"]):
+                elif "팔찌 효과" in el0:
+                    # 팔찌 효과는 각 부여 효과 앞에 <img src='emoticon_tooltip_bracelet_(locked|changeable)'> 아이콘이 붙는 구조.
+                    # 이 아이콘 위치를 sentinel("LOSTARK_SPLIT_MARKER")로 치환해 효과 경계 보존.
+                    # <BR>은 같은 효과 내 줄바꿈일 수 있으므로 공백으로 처리(over-split 방지).
+                    text_with_sep = re.sub(r"<img[^>]*emoticon_tooltip_bracelet_[^>]*>", "LOSTARK_SPLIT_MARKER", str(el1_raw))
+                    text_with_sep = re.sub(r"(?i)<br\s*/?>", " ", text_with_sep)
+                    text_with_sep = re.sub(r"<[^>]+>", "", text_with_sep)
+                    text_with_sep = re.sub(r"&[a-zA-Z_]+\s*", "", text_with_sep).strip()
+                    additional_effect = text_with_sep if not additional_effect else f"{additional_effect} | {text_with_sep}"
+                elif any(keyword in el0 for keyword in ["추가 효과", "연마 효과"]):
                     additional_effect = el1 if not additional_effect else f"{additional_effect} | {el1}"
-                elif "아크 패시브" in el0: 
+                elif "아크 패시브" in el0:
                     ark_passive_effect = el1
                 
                 # 💡 [추가] 보주 아이템의 "특수 효과" 처리
