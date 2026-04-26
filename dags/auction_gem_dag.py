@@ -27,6 +27,11 @@ def parse_auction_options(options_list):
         opt_name = opt.get("OptionName")
         if not opt_name:
             continue
+        # %(퍼센트) 옵션 vs +(정수) 옵션 구분 표시
+        if opt.get("IsValuePercentage"):
+            opt_name = f"{opt_name} %"
+        else:
+            opt_name = f"{opt_name} +"
         if opt.get("IsPenalty"):
             opt_name = f"[감소] {opt_name}"
         parsed[opt_name] = opt.get("Value")

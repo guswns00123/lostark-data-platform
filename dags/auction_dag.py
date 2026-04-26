@@ -24,17 +24,22 @@ def parse_auction_options(options_list):
     """API의 Options 리스트를 DB용 JSON 딕셔너리로 변환"""
     if not options_list:
         return "{}"
-    
+
     parsed = {}
     for opt in options_list:
         opt_name = opt.get("OptionName")
         if not opt_name:
             continue
+        # %(퍼센트) 옵션 vs +(정수) 옵션 구분 표시
+        if opt.get("IsValuePercentage"):
+            opt_name = f"{opt_name} %"
+        else:
+            opt_name = f"{opt_name} +"
         # 페널티(감소 효과)는 이름에 표시
         if opt.get("IsPenalty"):
             opt_name = f"[감소] {opt_name}"
         parsed[opt_name] = opt.get("Value")
-        
+
     return json.dumps(parsed, ensure_ascii=False)
 
 
