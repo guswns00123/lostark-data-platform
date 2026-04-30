@@ -29,11 +29,15 @@ def reset_user_call_count_dag():
         """
 
         pg_hook = PostgresHook(postgres_conn_id=CONN_ID)
-        with pg_hook.get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query)
-                affected = cur.rowcount
-            conn.commit()
+        conn = pg_hook.get_conn()
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    affected = cur.rowcount
+                conn.commit()
+        finally:
+            conn.close()
 
         print(f"✅ user_info_tb {affected}건 remaining_call_count 초기화 완료")
 
