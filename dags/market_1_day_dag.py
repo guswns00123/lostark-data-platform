@@ -80,11 +80,15 @@ def lostark_market_collect_1day():
         """
 
         pg_hook = PostgresHook(postgres_conn_id=CONN_ID)
-        with pg_hook.get_conn() as conn:
-            with conn.cursor() as cur:
-                execute_batch(cur, query, params)
-            conn.commit()
-        
+        conn = pg_hook.get_conn()
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    execute_batch(cur, query, params)
+                conn.commit()
+        finally:
+            conn.close()
+
         print(f"✅ {item_type} - {len(params)}건의 시세 이력 적재 완료 (시점: {collected_at})")
     
     target_items = [

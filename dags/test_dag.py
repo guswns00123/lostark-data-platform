@@ -114,19 +114,23 @@ def lostark_single_character_etl():
 
             # DB 적재 (UPSERT)
             hook = PostgresHook(postgres_conn_id=CONN_ID)
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.character_info_tb
-                        (character_name, server_name, character_level, character_class_name, item_avg_level)
-                        VALUES (%s, %s, %s, %s, %s)
-                        ON CONFLICT (character_name) DO UPDATE SET
-                            server_name = EXCLUDED.server_name,
-                            character_level = EXCLUDED.character_level,
-                            character_class_name = EXCLUDED.character_class_name,
-                            item_avg_level = EXCLUDED.item_avg_level;
-                    """, processed_tuples)
-                conn.commit()
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.character_info_tb
+                            (character_name, server_name, character_level, character_class_name, item_avg_level)
+                            VALUES (%s, %s, %s, %s, %s)
+                            ON CONFLICT (character_name) DO UPDATE SET
+                                server_name = EXCLUDED.server_name,
+                                character_level = EXCLUDED.character_level,
+                                character_class_name = EXCLUDED.character_class_name,
+                                item_avg_level = EXCLUDED.item_avg_level;
+                        """, processed_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
 
             logger.info(f"✅ 원정대 캐릭터 {len(processed_tuples)}건 전처리 및 UPSERT 완료")
 
@@ -172,19 +176,23 @@ def lostark_single_character_etl():
                 return
 
             hook = PostgresHook(postgres_conn_id=CONN_ID)
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.ark_grid_cores_tb 
-                        (
-                            character_name, slot_index, collected_at, name, grade, point, icon, 
-                            level_1_point, level_1_option, level_2_point, level_2_option, 
-                            level_3_point, level_3_option, level_4_point, level_4_option, 
-                            level_5_point, level_5_option, level_6_point, level_6_option
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, all_core_tuples)
-                conn.commit()
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.ark_grid_cores_tb
+                            (
+                                character_name, slot_index, collected_at, name, grade, point, icon,
+                                level_1_point, level_1_option, level_2_point, level_2_option,
+                                level_3_point, level_3_option, level_4_point, level_4_option,
+                                level_5_point, level_5_option, level_6_point, level_6_option
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        """, all_core_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
             logger.info(f"코어 데이터({len(all_core_tuples)}건) 컬럼 분할 및 이력 적재 완료!")
 
         @task()
@@ -239,20 +247,24 @@ def lostark_single_character_etl():
 
             # 5. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID)
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.ark_grid_gems_tb 
-                        (
-                            character_name, core_index, gem_index, collected_at, grade, is_active, icon,
-                            required_willpower, willpower_efficiency, point_type, point_value,
-                            effect_1_name, effect_1_level, effect_1_value,
-                            effect_2_name, effect_2_level, effect_2_value
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, all_gem_tuples)
-                conn.commit()
-                
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.ark_grid_gems_tb
+                            (
+                                character_name, core_index, gem_index, collected_at, grade, is_active, icon,
+                                required_willpower, willpower_efficiency, point_type, point_value,
+                                effect_1_name, effect_1_level, effect_1_value,
+                                effect_2_name, effect_2_level, effect_2_value
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        """, all_gem_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 젬 데이터 총 {len(all_gem_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
         @task()
@@ -303,16 +315,20 @@ def lostark_single_character_etl():
 
             # 6. DB 연결 및 일괄 적재 (executemany)
             hook = PostgresHook(postgres_conn_id=CONN_ID)
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    # 💡 DELETE/UPSERT 없이 INSERT 문으로 이력 누적
-                    cur.executemany("""
-                        INSERT INTO lostark.ark_passive_points_tb 
-                        (character_name, name, collected_at, value, point_rank, point_level)
-                        VALUES (%s, %s, %s, %s, %s, %s);
-                    """, all_point_tuples)
-                conn.commit()
-                
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        # 💡 DELETE/UPSERT 없이 INSERT 문으로 이력 누적
+                        cur.executemany("""
+                            INSERT INTO lostark.ark_passive_points_tb
+                            (character_name, name, collected_at, value, point_rank, point_level)
+                            VALUES (%s, %s, %s, %s, %s, %s);
+                        """, all_point_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 포인트 데이터 총 {len(all_point_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
         @task()
@@ -364,16 +380,20 @@ def lostark_single_character_etl():
 
             # 6. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID)
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.ark_passive_effects_tb 
-                        (character_name, name, collected_at, icon, tier, effect_name, level)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s);
-                    """, all_effect_tuples)
-                conn.commit()
-                
-            logger.info(f"✅ 패시브 효과 데이터 총 {len(all_effect_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")       
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.ark_passive_effects_tb
+                            (character_name, name, collected_at, icon, tier, effect_name, level)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s);
+                        """, all_effect_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
+            logger.info(f"✅ 패시브 효과 데이터 총 {len(all_effect_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
         @task()
         def load_armory_avatars(file_path: str, **context):
@@ -431,21 +451,25 @@ def lostark_single_character_etl():
 
             # 6. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID)
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    # 💡 DELETE 없이 시간대별 이력 적재
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_avatars_tb 
-                        (
-                            character_name, name, collected_at, type, icon, grade, is_set, is_inner, 
-                            basic_effect_stat, basic_effect_value, 
-                            tendency_intellect, tendency_courage, tendency_charm, tendency_kindness, 
-                            source
-                        ) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, all_av_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        # 💡 DELETE 없이 시간대별 이력 적재
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_avatars_tb
+                            (
+                                character_name, name, collected_at, type, icon, grade, is_set, is_inner,
+                                basic_effect_stat, basic_effect_value,
+                                tendency_intellect, tendency_courage, tendency_charm, tendency_kindness,
+                                source
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        """, all_av_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 아바타 데이터 총 {len(all_av_tuples)}건 (다수 캐릭터 분량) 스탯 분할 및 일괄 적재 완료!")
 
         @task()
@@ -499,16 +523,20 @@ def lostark_single_character_etl():
 
             # 6. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID) # 상단에 정의된 CONN_ID 사용
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    # 💡 DELETE 없이 시간대별 이력 적재
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_card_tb 
-                        (character_name, slot, collected_at, name, icon, grade, awake_count, awake_total, description) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, all_card_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        # 💡 DELETE 없이 시간대별 이력 적재
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_card_tb
+                            (character_name, slot, collected_at, name, icon, grade, awake_count, awake_total, description)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        """, all_card_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 카드 장착 데이터 총 {len(all_card_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
         
         @task()
@@ -558,15 +586,19 @@ def lostark_single_character_etl():
 
             # 6. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID) # 상단에 정의된 CONN_ID 사용
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_card_effects_tb 
-                        (character_name, effect_name, collected_at, description) 
-                        VALUES (%s, %s, %s, %s);
-                    """, all_effect_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_card_effects_tb
+                            (character_name, effect_name, collected_at, description)
+                            VALUES (%s, %s, %s, %s);
+                        """, all_effect_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 카드 세트 효과 데이터 총 {len(all_effect_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
         @task()
@@ -611,15 +643,19 @@ def lostark_single_character_etl():
 
             # 6. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID) # 상단에 정의된 CONN_ID 사용
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_collectibles_tb 
-                        (character_name, type, collected_at, icon, point, max_point) 
-                        VALUES (%s, %s, %s, %s, %s, %s);
-                    """, all_summary_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_collectibles_tb
+                            (character_name, type, collected_at, icon, point, max_point)
+                            VALUES (%s, %s, %s, %s, %s, %s);
+                        """, all_summary_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 수집형 포인트 요약 데이터 총 {len(all_summary_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
         @task()
@@ -669,15 +705,19 @@ def lostark_single_character_etl():
 
             # 7. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID) # 상단에 정의된 CONN_ID 사용
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_collectible_details_tb 
-                        (character_name, type, point_name, collected_at, point, max_point) 
-                        VALUES (%s, %s, %s, %s, %s, %s);
-                    """, all_detail_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_collectible_details_tb
+                            (character_name, type, point_name, collected_at, point, max_point)
+                            VALUES (%s, %s, %s, %s, %s, %s);
+                        """, all_detail_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 수집형 포인트 상세 데이터 총 {len(all_detail_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
         @task()
@@ -730,16 +770,20 @@ def lostark_single_character_etl():
 
             # 6. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID) # 상단에 정의된 CONN_ID 사용
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    # 💡 DELETE 없이 시간대별로 이력 계속 적재 (INSERT)
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_engravings_tb 
-                        (character_name, name, collected_at, grade, level, ability_stone_level, description) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s);
-                    """, all_engraving_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        # 💡 DELETE 없이 시간대별로 이력 계속 적재 (INSERT)
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_engravings_tb
+                            (character_name, name, collected_at, grade, level, ability_stone_level, description)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s);
+                        """, all_engraving_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 각인 데이터 총 {len(all_engraving_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
         
         @task()
@@ -810,18 +854,22 @@ def lostark_single_character_etl():
 
             # 6. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID) # 상단에 정의된 CONN_ID 사용
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_equipment_tb 
-                        (character_name, slot_index, type, name, collected_at, icon, grade, 
-                        honing_level, quality, item_tier, advanced_honing_level,
-                        basic_effect, additional_effect, ark_passive_effect) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, all_eq_tuples)
-                conn.commit()
-                    
-            logger.info(f"✅ 장비 데이터 총 {len(all_eq_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")       
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_equipment_tb
+                            (character_name, slot_index, type, name, collected_at, icon, grade,
+                            honing_level, quality, item_tier, advanced_honing_level,
+                            basic_effect, additional_effect, ark_passive_effect)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        """, all_eq_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
+            logger.info(f"✅ 장비 데이터 총 {len(all_eq_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
         
         @task()
         def load_armory_gems(file_path: str, **context):
@@ -899,17 +947,21 @@ def lostark_single_character_etl():
 
             # 7. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID) # 상단에 정의된 CONN_ID 사용
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    # 💡 DELETE 없이 이력 누적 (INSERT)
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_gem_tb 
-                        (character_name, slot, collected_at, name, grade, level, skill_name, 
-                        effect_type_name, effect_type_value, basic_attack_boost_value, icon) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, all_gem_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        # 💡 DELETE 없이 이력 누적 (INSERT)
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_gem_tb
+                            (character_name, slot, collected_at, name, grade, level, skill_name,
+                            effect_type_name, effect_type_value, basic_attack_boost_value, icon)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        """, all_gem_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 보석 상세 데이터 총 {len(all_gem_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
         @task()
@@ -983,25 +1035,29 @@ def lostark_single_character_etl():
 
             # 7. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID) # 상단에 정의된 CONN_ID 사용
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    # 💡 execute -> executemany 로 변경됨
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_profile_tb (
-                            character_name, collected_at, server_name, character_class_name, character_level, 
-                            item_avg_level, combat_power, character_image, expedition_level, 
-                            town_level, town_name, title, guild_member_grade, guild_name, 
-                            using_skill_point, total_skill_point, honor_point,
-                            stat_atk, stat_hp, stat_crit, stat_spec, stat_swift, stat_dom, stat_end, stat_exp,
-                            tend_intellect, tend_courage, tend_charm, tend_kindness
-                        ) VALUES (
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                            %s, %s, %s, %s, %s, %s, %s, %s,
-                            %s, %s, %s, %s
-                        );
-                    """, all_profile_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        # 💡 execute -> executemany 로 변경됨
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_profile_tb (
+                                character_name, collected_at, server_name, character_class_name, character_level,
+                                item_avg_level, combat_power, character_image, expedition_level,
+                                town_level, town_name, title, guild_member_grade, guild_name,
+                                using_skill_point, total_skill_point, honor_point,
+                                stat_atk, stat_hp, stat_crit, stat_spec, stat_swift, stat_dom, stat_end, stat_exp,
+                                tend_intellect, tend_courage, tend_charm, tend_kindness
+                            ) VALUES (
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                                %s, %s, %s, %s, %s, %s, %s, %s,
+                                %s, %s, %s, %s
+                            );
+                        """, all_profile_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 프로필 통합 데이터 총 {len(all_profile_tuples)}건 (다수 캐릭터 분량) 시계열 이력 적재 완료!")
         
         @task()
@@ -1083,20 +1139,24 @@ def lostark_single_character_etl():
 
             # 8. DB 연결 및 일괄 적재 (Batch Insert)
             hook = PostgresHook(postgres_conn_id=CONN_ID)
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany("""
-                        INSERT INTO lostark.armory_skills_tb 
-                        (character_name, skill_name, collected_at, skill_level, type, 
-                        cooldown, mana_cost, weak_point, stagger, attack_type, is_counter,
-                        tripod_1_name,
-                        tripod_2_name,
-                        tripod_3_name,
-                        rune_name, rune_grade, rune_effect) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, all_skill_tuples)
-                conn.commit()
-                    
+            conn = hook.get_conn()
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.executemany("""
+                            INSERT INTO lostark.armory_skills_tb
+                            (character_name, skill_name, collected_at, skill_level, type,
+                            cooldown, mana_cost, weak_point, stagger, attack_type, is_counter,
+                            tripod_1_name,
+                            tripod_2_name,
+                            tripod_3_name,
+                            rune_name, rune_grade, rune_effect)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        """, all_skill_tuples)
+                    conn.commit()
+            finally:
+                conn.close()
+
             logger.info(f"✅ 스킬 상세 데이터 총 {len(all_skill_tuples)}건 (다수 캐릭터 분량) 일괄 적재 완료!")
 
 

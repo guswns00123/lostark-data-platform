@@ -106,10 +106,14 @@ def auction_gem_collect_dag():
         """
 
         pg_hook = PostgresHook(postgres_conn_id=CONN_ID)
-        with pg_hook.get_conn() as conn:
-            with conn.cursor() as cur:
-                execute_batch(cur, query, params)
-            conn.commit()
+        conn = pg_hook.get_conn()
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    execute_batch(cur, query, params)
+                conn.commit()
+        finally:
+            conn.close()
 
         print(f"✅ [{item_type}] {len(params)}건 매물 적재 완료")
 
