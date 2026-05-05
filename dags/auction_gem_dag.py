@@ -45,6 +45,8 @@ def parse_auction_options(options_list):
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["lostark", "auction", "gem"],
+    max_active_runs=1,  # 동일한 DAG가 동시에 2개 이상 겹쳐서 도는 것을 방지
+    max_active_tasks=3,  # 이 DAG 안에서 동시에 실행되는 Task 개수를 최대 3개로 제한
     default_args={
         "on_failure_callback": discord_failure_callback,
         "retries": 0,
@@ -60,11 +62,11 @@ def auction_gem_collect_dag():
         if not items:
             return None
 
-        exec_date = context['logical_date'].strftime("%Y%m%d_%H%M")
+        exec_date = context["logical_date"].strftime("%Y%m%d_%H%M")
         file_path = f"/tmp/auction_gem_{item_label}_{exec_date}.json"
 
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(items, f, ensure_ascii=False)
 
         return file_path
@@ -75,9 +77,9 @@ def auction_gem_collect_dag():
             print(f"❌ [{item_type}] 처리할 데이터가 없습니다!")
             return
 
-        collected_at = context['logical_date']
+        collected_at = context["logical_date"]
 
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             items = json.load(f)
 
         params = []
@@ -85,18 +87,20 @@ def auction_gem_collect_dag():
             auc_info = item.get("AuctionInfo", {})
             options_json = parse_auction_options(item.get("Options", []))
 
-            params.append((
-                item_type,
-                item.get("Name"),
-                item.get("Grade"),
-                item.get("Tier"),
-                item.get("GradeQuality"),
-                auc_info.get("BuyPrice"),
-                auc_info.get("BidPrice"),
-                auc_info.get("EndDate"),
-                options_json,
-                collected_at
-            ))
+            params.append(
+                (
+                    item_type,
+                    item.get("Name"),
+                    item.get("Grade"),
+                    item.get("Tier"),
+                    item.get("GradeQuality"),
+                    auc_info.get("BuyPrice"),
+                    auc_info.get("BidPrice"),
+                    auc_info.get("EndDate"),
+                    options_json,
+                    collected_at,
+                )
+            )
 
         query = """
             INSERT INTO lostark.auction_items_tb (
@@ -133,7 +137,7 @@ def auction_gem_collect_dag():
                 "ItemTier": 4,
                 "ItemName": "8레벨",
                 "PageNo": 1,
-            }
+            },
         },
         {
             "label": "보석_9레벨",
@@ -145,7 +149,7 @@ def auction_gem_collect_dag():
                 "ItemTier": 4,
                 "ItemName": "9레벨",
                 "PageNo": 1,
-            }
+            },
         },
         {
             "label": "보석_10레벨",
@@ -157,25 +161,22 @@ def auction_gem_collect_dag():
                 "ItemTier": 4,
                 "ItemName": "10레벨",
                 "PageNo": 1,
-            }
+            },
         },
     ]
 
     for target in target_payloads:
         wait_20s = TimeDeltaSensor(
-            task_id=f"wait_20s_{target['label']}",
-            delta=timedelta(seconds=20)
+            task_id=f"wait_20s_{target['label']}", delta=timedelta(seconds=20)
         )
         with TaskGroup(group_id=f"process_auction_{target['label']}") as item_group:
 
-            extracted_file = extract_auction_task.override(task_id=f"extract_{target['label']}")(
-                payload=target["payload"],
-                item_label=target["label"]
-            )
+            extracted_file = extract_auction_task.override(
+                task_id=f"extract_{target['label']}"
+            )(payload=target["payload"], item_label=target["label"])
 
             load_auction_task.override(task_id=f"load_{target['label']}")(
-                file_path=extracted_file,
-                item_type=target["type"]
+                file_path=extracted_file, item_type=target["type"]
             )
         prev_group >> wait_20s >> item_group
 

@@ -13,6 +13,8 @@ CONN_ID = "postgres_lostark"
     schedule="0 0 * * *",  # 매일 00:00 (KST 기준이면 Airflow timezone 확인 필요)
     start_date=datetime(2026, 1, 1),
     catchup=False,
+    max_active_runs=1,  # 동일한 DAG가 동시에 2개 이상 겹쳐서 도는 것을 방지
+    max_active_tasks=3,  # 이 DAG 안에서 동시에 실행되는 Task 개수를 최대 3개로 제한
     tags=["lostark", "user", "maintenance"],
     default_args={
         "on_failure_callback": discord_failure_callback,

@@ -8,6 +8,7 @@
 """
 
 import sys
+
 sys.path.insert(0, "/home/airflow/lostark-data-platform")
 
 from datetime import datetime
@@ -35,6 +36,8 @@ with DAG(
     schedule=None,
     catchup=False,
     is_paused_upon_creation=True,
+    max_active_runs=1,  # 동일한 DAG가 동시에 2개 이상 겹쳐서 도는 것을 방지
+    max_active_tasks=3,  # 이 DAG 안에서 동시에 실행되는 Task 개수를 최대 3개로 제한
     tags=["lostark", "crawl", "meta"],
     default_args={
         "on_failure_callback": discord_failure_callback,
