@@ -10,7 +10,7 @@ CONN_ID = "postgres_lostark"
 
 @dag(
     dag_id="reset_user_call_count",
-    schedule="0 0 * * *",  # 매일 00:00 (KST 기준이면 Airflow timezone 확인 필요)
+    schedule="0 1 * * *",  # 매일 00:00 (KST 기준이면 Airflow timezone 확인 필요)
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,  # 동일한 DAG가 동시에 2개 이상 겹쳐서 도는 것을 방지
